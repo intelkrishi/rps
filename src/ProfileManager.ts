@@ -150,7 +150,7 @@ export class ProfileManager implements IProfileManager {
 
     if (profile?.ciraConfigObject) {
       if (!profile.ciraConfigObject.password) {
-        mpsPassword = PasswordHelper.generateRandomPassword(AMTRandomPasswordLength)
+        mpsPassword = PasswordHelper.generateRandomPassword(AMTRandomPasswordLength, true)
 
         if (mpsPassword) {
           this.logger.debug(`Created random MPS password for ${profile.profileName}`)

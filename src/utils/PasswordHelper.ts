@@ -52,9 +52,13 @@ const PasswordHelper = {
      * @param {number} length Length of desired password
      * @returns {string} Returns random password string
      */
-  generateRandomPassword: (length: number): string => {
+  generateRandomPassword: (length: number, useXMLSafePassword: boolean = false): string => {
+    let passwordChars = AMTRandomPasswordChars
+    if (useXMLSafePassword) {
+      passwordChars = AMTRandomPasswordChars.replace('&', '')
+    }
     for (let i = 0; i < 10000; ++i) {
-      const password: string = cryptoRandomString({ length: length, characters: AMTRandomPasswordChars })
+      const password: string = cryptoRandomString({ length: length, characters: passwordChars })
 
       if (PasswordHelper.passwordCheck(password)) {
         return password
