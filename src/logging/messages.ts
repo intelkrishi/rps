@@ -4,7 +4,7 @@
 **********************************************************************/
 
 export const MESSAGES = {
-  ACTIVATOR_AMT_ADMIN_PASSWORD_UPDATED: 'ACTIVATOR: AMT admin password updated',
+  ACTIVATOR_AMT_ADMIN_PASSWORD_UPDATED: 'AMT admin password updated',
   ACTIVATOR_PROVISIONING_CERTIFICATE_FAILED: 'Failed to get provisioning certificate',
   ACTIVATOR_PROVISIONING_CERTIFICATE_NOT_FOUND: 'AMT provisioning certificate not found on server',
   ACTIVATOR_PROVISIONING_CERTIFICATE_NOT_MATCHED: 'Provisioning certificate doesn\'t match any trusted certificates from AMT',

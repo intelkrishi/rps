@@ -60,7 +60,7 @@ export class Activator implements IExecutor {
         const result = await updateAMTAdminPassword(clientId, wsmanResponse, this.responseMsg, this.configurator, this.validator, httpHandler)
         if (result.method === 'success') {
           clientObj.activationStatus.changePassword = false
-          logger.debug(`${clientId} : AMT admin password updated: ${clientObj.uuid}`)
+          logger.debug(`${clientId} : ${message.ACTIVATOR_AMT_ADMIN_PASSWORD_UPDATED}: ${clientObj.uuid}`)
           return await this.waitAfterActivation(clientId, wsmanResponse, httpHandler)
         } else if (result.method === 'error') {
           throw new RPSError(`Device ${clientObj.uuid} failed to update AMT password.`)
@@ -101,8 +101,8 @@ export class Activator implements IExecutor {
         return this.responseMsg.get(clientId, wsmanRequest, 'wsman', 'ok', 'alls good!')
       }
     } catch (error) {
-      logger.error(`${clientId} : Failed to activate - ${error}`)
-      MqttProvider.publishEvent('fail', ['Activator'], 'Failed to activate', clientObj.uuid)
+      logger.error(`${clientId} : ${message.ACTIVATOR_ACTIVATE_FAILED} - ${error}`)
+      MqttProvider.publishEvent('fail', ['Activator'], message.ACTIVATOR_ACTIVATE_FAILED, clientObj.uuid)
       if (error instanceof RPSError) {
         clientObj.status.Status = error.message
       } else {
