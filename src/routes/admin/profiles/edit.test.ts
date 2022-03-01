@@ -1,11 +1,11 @@
-import { AMTConfiguration } from '../../../models/Rcs'
+import { AMTConfiguration } from '../../../models'
 import {
   handleAMTPassword,
   handleMEBxPassword,
   handleGenerateRandomPassword,
   handleGenerateRandomMEBxPassword,
   getUpdatedData
-} from './editProfile'
+} from './edit'
 
 test('test handleAMTpassword when the request body amtPassword is null or undefined', () => {
   const newConfig: AMTConfiguration = { profileName: 'acm', activation: 'acmactivate', tenantId: '' }

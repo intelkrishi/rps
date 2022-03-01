@@ -1,21 +1,20 @@
+/*********************************************************************
+ * Copyright (c) Intel Corporation 2022
+ * SPDX-License-Identifier: Apache-2.0
+ **********************************************************************/
 
-import { ClientManager } from '../ClientManager'
-import { Configurator } from '../Configurator'
 import Logger from '../Logger'
-import { NodeForge } from '../NodeForge'
 import { ClientResponseMsg } from '../utils/ClientResponseMsg'
-import { WSManProcessor } from '../WSManProcessor'
 import { v4 as uuid } from 'uuid'
 import { EnvReader } from '../utils/EnvReader'
 import { config } from '../test/helper/Config'
 import { Maintenance } from './Maintenance'
+import { HttpHandler } from '../HttpHandler'
+import { devices } from '../WebSocketListener'
 EnvReader.GlobalEnvConfig = config
-const nodeForge = new NodeForge()
-const configurator = new Configurator()
-const clientManager = ClientManager.getInstance(new Logger('ClientManager'))
-const responseMsg = new ClientResponseMsg(new Logger('ClientResponseMsg'), nodeForge)
-const amtwsman = new WSManProcessor(new Logger('WSManProcessor'), clientManager, responseMsg)
-const maintenance = new Maintenance(new Logger('Maintenance'), configurator, responseMsg, amtwsman, clientManager)
+const responseMsg = new ClientResponseMsg(new Logger('ClientResponseMsg'))
+const httpHandler = new HttpHandler()
+const maintenance = new Maintenance(new Logger('Maintenance'), responseMsg)
 let maintenanceMsg
 describe('execute', () => {
   beforeEach(() => {
@@ -47,58 +46,30 @@ describe('execute', () => {
       }
     }
   })
+  const digestChallenge = {
+    realm: 'Digest:AF541D9BC94CFF7ADFA073F492F355E6',
+    nonce: 'dxNzCQ9JBAAAAAAAd2N7c6tYmUl0FFzQ',
+    stale: 'false',
+    qop: 'auth'
+  }
+  const connectionParams = {
+    guid: '4c4c4544-004b-4210-8033-b6c04f504633',
+    port: 16992,
+    digestChallenge: digestChallenge,
+    username: 'admin',
+    password: 'P@ssw0rd'
+  }
   test('should return success response for successful timesync response', async () => {
-    const message = {
-      payload: {
-        Header: {
-          To: 'http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous',
-          RelatesTo: '32',
-          Action: 'http://intel.com/wbem/wscim/1/amt-schema/1/AMT_TimeSynchronizationService/SetHighAccuracyTimeSynchResponse',
-          MessageID: 'uuid:00000000-8086-8086-8086-00000002CFEB',
-          ResourceURI: 'http://intel.com/wbem/wscim/1/amt-schema/1/AMT_TimeSynchronizationService',
-          Method: 'SetHighAccuracyTimeSynch'
-        },
-        Body: {
-          ReturnValue: 0,
-          ReturnValueStr: 'SUCCESS'
-        }
-      }
-    }
     const clientId = uuid()
-    clientManager.addClient({ ClientId: clientId, ClientSocket: null, ClientData: maintenanceMsg })
-    const result = await maintenance.execute(message, clientId)
-    console.log(result)
-    expect(result.method).toBe('success')
+    devices[clientId] = { ClientId: clientId, ClientSocket: null, ClientData: maintenanceMsg, connectionParams: connectionParams }
+    const result = await maintenance.execute(maintenanceMsg, clientId, httpHandler)
+    expect(result.method).toBe('wsman')
   })
   test('should return failure message for maintenance task does not exists', async () => {
     const clientId = uuid()
     maintenanceMsg.payload.task = 'setMEBXPassword'
-    clientManager.addClient({ ClientId: clientId, ClientSocket: null, ClientData: maintenanceMsg })
-    const result = await maintenance.execute(maintenanceMsg, clientId)
-    console.log(result)
-    expect(result.method).toBe('error')
-  })
-  test('should throw an exception if ', async () => {
-    const message = {
-      payload: {
-        Header: {
-          To: 'http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous',
-          RelatesTo: '32',
-          Action: 'http://intel.com/wbem/wscim/1/amt-schema/1/AMT_TimeSynchronizationService/SetHighAccuracyTimeSynchResponse',
-          MessageID: 'uuid:00000000-8086-8086-8086-00000002CFEB',
-          ResourceURI: 'http://intel.com/wbem/wscim/1/amt-schema/1/AMT_TimeSynchronizationService',
-          Method: 'SetHighAccuracyTimeSynch'
-        },
-        Body: {
-          ReturnValue: 1,
-          ReturnValueStr: 'PT_STATUS_INTERNAL_ERROR'
-        }
-      }
-    }
-    const clientId = uuid()
-    clientManager.addClient({ ClientId: clientId, ClientSocket: null, ClientData: maintenanceMsg })
-    const result = await maintenance.execute(message, clientId)
-    console.log(result)
+    devices[clientId] = { ClientId: clientId, ClientSocket: null, ClientData: maintenanceMsg }
+    const result = await maintenance.execute(maintenanceMsg, clientId, httpHandler)
     expect(result.method).toBe('error')
   })
 })

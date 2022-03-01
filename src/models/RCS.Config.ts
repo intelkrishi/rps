@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * Author: Madhavi Losetty
  **********************************************************************/
+import { DigestChallenge } from '@open-amt-cloud-toolkit/wsman-messages/models/common'
 import * as WebSocket from 'ws'
-import { AMTConfiguration, AMTDomain } from './Rcs'
+import { AMTConfiguration, AMTDomain, ProvisioningCertObj } from '.'
 import { AMTEthernetPortSettings } from './WSManResponse'
 
 export interface WebSocketConfig {
@@ -91,21 +92,23 @@ export interface ClientObject {
   socketConn?: SocketConnection
   count?: number
   payload?: any
-  certObj?: any
+  certObj?: ProvisioningCertObj
   readyState?: number
   activationStatus?: ActivationStatus
-  delayEndTime?: any
+  delayEndTime?: number
   amtPassword?: string
   mebxPassword?: string
   ciraconfig?: CIRAConfigFlow
-  nonce?: any
-  signature?: any
+  nonce?: Buffer
+  signature?: string
   mpsUsername?: string
   mpsPassword?: string
   network?: NetworkConfigFlow
   tls?: TLSConfigFlow
   status?: Status
   unauthCount?: number
+  connectionParams?: connectionParams
+  messageId?: number
 }
 
 export interface ActivationStatus {
@@ -185,7 +188,7 @@ export interface mpsServer {
   AuthMethod: number
   Username: string
   Password: string
-  CN?: string
+  CommonName?: string
 }
 
 export interface ClientMsg {
@@ -268,4 +271,15 @@ export enum TlsMode{
   SERVERALLOWNONTLS = 2,
   MUTUALONLY = 3,
   MUTUALALLOWNONTLS = 4
+}
+
+export interface connectionParams {
+  port: number
+  guid: string
+  username: string
+  password: string
+  nonce?: string
+  nonceCounter?: number
+  consoleNonce?: string
+  digestChallenge?: DigestChallenge
 }

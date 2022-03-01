@@ -1,21 +1,22 @@
 import { createSpyObj } from '../../../test/helper/jest'
-import * as version from './getVersion'
+import { allProfiles } from './all'
 
-describe('Checks getVersion', () => {
+describe('Profiles - All', () => {
   let resSpy
   let req
   beforeEach(() => {
     resSpy = createSpyObj('Response', ['status', 'json', 'end', 'send'])
+    req = {
+      db: { profiles: { get: jest.fn() } },
+      query: { }
+    }
+    jest.spyOn(req.db.profiles, 'get').mockResolvedValue([])
     resSpy.status.mockReturnThis()
     resSpy.json.mockReturnThis()
     resSpy.send.mockReturnThis()
-    req = {
-      protocolVersion: '4.0.0'
-    }
   })
-  it('should return with protocolVersion', async () => {
-    await version.getVersion(req, resSpy)
+  it('should get all', async () => {
+    await allProfiles(req, resSpy)
     expect(resSpy.status).toHaveBeenCalledWith(200)
-    expect(resSpy.json).toHaveBeenCalledWith({ protocolVersion: '4.0.0' })
   })
 })

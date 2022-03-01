@@ -9,26 +9,22 @@ import { IExecutor } from '../interfaces/IExecutor'
 import { ILogger } from '../interfaces/ILogger'
 import { ClientMsg, ClientObject } from '../models/RCS.Config'
 import { ClientResponseMsg } from '../utils/ClientResponseMsg'
-import { WSManProcessor } from '../WSManProcessor'
-import { IClientManager } from '../interfaces/IClientManager'
 import { RPSError } from '../utils/RPSError'
-import { AMTDeviceDTO } from '../repositories/dto/AmtDeviceDTO'
 import { IConfigurator } from '../interfaces/IConfigurator'
 import { EnvReader } from '../utils/EnvReader'
 import got from 'got'
 import { MqttProvider } from '../utils/MqttProvider'
 import { HttpHandler } from '../HttpHandler'
-import { AMT } from '@open-amt-cloud-toolkit/wsman-messages/index'
+import { AMT } from '@open-amt-cloud-toolkit/wsman-messages'
+import { devices } from '../WebSocketListener'
 export class Deactivator implements IExecutor {
-  amt: AMT.AMT
+  amt: AMT.Messages
   constructor (
     private readonly logger: ILogger,
     private readonly responseMsg: ClientResponseMsg,
-    private readonly amtwsman: WSManProcessor,
-    private readonly clientManager: IClientManager,
     readonly configurator?: IConfigurator
   ) {
-    this.amt = new AMT.AMT()
+    this.amt = new AMT.Messages()
   }
 
   /**
@@ -40,7 +36,7 @@ export class Deactivator implements IExecutor {
   async execute (message: any, clientId: string, httpHandler?: HttpHandler): Promise<ClientMsg> {
     let clientObj: ClientObject
     try {
-      clientObj = this.clientManager.getClientObject(clientId)
+      clientObj = devices[clientId]
 
       const wsmanResponse = message.payload
 
@@ -50,14 +46,14 @@ export class Deactivator implements IExecutor {
 
       switch (wsmanResponse.statusCode) {
         case 401: {
-          const messageId = (httpHandler.messageId++).toString()
+          const messageId = (clientObj.messageId++).toString()
           const xmlRequestBody = this.amt.SetupAndConfigurationService(AMT.Methods.UNPROVISION, messageId, null, 2)
-          const data = httpHandler.wrapIt(xmlRequestBody)
+          const data = httpHandler.wrapIt(xmlRequestBody, clientObj.connectionParams)
           return this.responseMsg.get(clientId, data, 'wsman', 'ok', 'alls good!')
         }
         case 200: {
           this.logger.debug(`Deleting secret from vault for ${clientObj.uuid}`)
-          await this.configurator.amtDeviceRepository.delete(new AMTDeviceDTO(clientObj.uuid, null, null, null, null, null, null))
+          await this.configurator.amtDeviceRepository.delete(clientObj.uuid)
           this.logger.debug(`Deleting metadata from mps for ${clientObj.uuid}`)
           /* unregister device metadata with MPS */
           try {

@@ -1,34 +1,31 @@
-import { IClientManager } from '../interfaces/IClientManager'
-import { IConfigurator } from '../interfaces/IConfigurator'
+/*********************************************************************
+ * Copyright (c) Intel Corporation 2022
+ * SPDX-License-Identifier: Apache-2.0
+ **********************************************************************/
+
+import { HttpHandler } from '../HttpHandler'
+import { devices } from '../WebSocketListener'
 import { IExecutor } from '../interfaces/IExecutor'
 import { ILogger } from '../interfaces/ILogger'
-import { ClientMsg, ClientObject } from '../models/RCS.Config'
+import { ClientMsg } from '../models/RCS.Config'
 import { ClientResponseMsg } from '../utils/ClientResponseMsg'
 import { synchronizeTime } from '../utils/maintenance/synchronizeTime'
 import { MqttProvider } from '../utils/MqttProvider'
 import { RPSError } from '../utils/RPSError'
-import { WSManProcessor } from '../WSManProcessor'
 
 export class Maintenance implements IExecutor {
   constructor (
     private readonly logger: ILogger,
-    private readonly configurator: IConfigurator,
-    private readonly responseMsg: ClientResponseMsg,
-    private readonly amtwsman: WSManProcessor,
-    private readonly clientManager: IClientManager
+    private readonly responseMsg: ClientResponseMsg
   ) { }
 
-  async execute (message: any, clientId: string): Promise<ClientMsg> {
-    const clientObj: ClientObject = this.clientManager.getClientObject(clientId)
-    const payload: any = clientObj.ClientData.payload
+  async execute (message: any, clientId: string, httpHandler: HttpHandler): Promise<ClientMsg> {
+    const clientObj = devices[clientId]
+    const payload = clientObj.ClientData.payload
     try {
       switch (payload.task) {
         case 'synctime': {
-          const result = await synchronizeTime(clientId, message, this.amtwsman, this.clientManager)
-          if (result) {
-            return this.responseMsg.get(clientId, null, 'success', 'success', JSON.stringify({ status: 'Time Synchronized' }))
-          }
-          break
+          return await synchronizeTime(clientId, message, this.responseMsg, httpHandler)
         }
         default: {
           return this.responseMsg.get(clientId, null, 'error', 'failed', JSON.stringify({ status: 'Not a supported maintenance task' }))

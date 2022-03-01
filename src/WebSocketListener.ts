@@ -7,23 +7,21 @@
 import * as WebSocket from 'ws'
 import { v4 as uuid } from 'uuid'
 
-import { WebSocketConfig, ClientObject } from './models/RCS.Config'
+import { ClientMsg, ClientObject, WebSocketConfig } from './models/RCS.Config'
 import { IWebSocketListener } from './interfaces/IWebSocketListener'
-import { IClientManager } from './interfaces/IClientManager'
 import { IDataProcessor } from './interfaces/IDataProcessor'
 import { ILogger } from './interfaces/ILogger'
-
+const devices: {[key: string]: ClientObject} = {}
+export { devices }
 export class WebSocketListener implements IWebSocketListener {
-  clientManager: IClientManager
   dataProcessor: IDataProcessor
   wsServer: WebSocket.Server
   wsConfig: WebSocketConfig
   logger: ILogger
 
-  constructor (logger: ILogger, wsConfig: WebSocketConfig, clientManager: IClientManager, dataProcessor: IDataProcessor) {
+  constructor (logger: ILogger, wsConfig: WebSocketConfig, dataProcessor: IDataProcessor) {
     this.logger = logger
     this.wsConfig = wsConfig
-    this.clientManager = clientManager
     this.dataProcessor = dataProcessor
   }
 
@@ -33,15 +31,9 @@ export class WebSocketListener implements IWebSocketListener {
   connect (): boolean {
     try {
       this.wsServer = new WebSocket.Server({ port: this.wsConfig.WebSocketPort })
-
-      if (this.wsServer !== null) {
-        this.wsServer.on('connection', this.onClientConnected)
-        this.logger.info(`RPS Microservice socket listening on port: ${this.wsConfig.WebSocketPort} ...!`)
-        return true
-      } else {
-        this.logger.error('Failed to start WebSocket server')
-        return false
-      }
+      this.wsServer.on('connection', this.onClientConnected)
+      this.logger.info(`RPS Microservice socket listening on port: ${this.wsConfig.WebSocketPort} ...!`)
+      return true
     } catch (error) {
       this.logger.error(`Failed to start WebSocket server : ${error}`)
       return false
@@ -53,46 +45,35 @@ export class WebSocketListener implements IWebSocketListener {
    * @param {WebSocket} ws  websocket object
    */
   onClientConnected = (ws: WebSocket): void => {
-    try {
-      const clientId = uuid()
+    const clientId = uuid()
+    devices[clientId] = { ClientId: clientId, ClientSocket: ws, ciraconfig: {}, network: { count: 0 }, status: {}, tls: {}, activationStatus: {}, unauthCount: 0, messageId: 0 }
 
-      const client: ClientObject = { ClientId: clientId, ClientSocket: ws, ciraconfig: {}, network: {}, status: {}, tls: {}, activationStatus: {}, unauthCount: 0 }
-      this.clientManager.addClient(client)
+    ws.on('message', async (data: WebSocket.Data, isBinary: boolean) => {
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
+      const message = isBinary ? data : data.toString()
+      await this.onMessageReceived(message, clientId)
+    })
+    ws.on('close', this.onClientDisconnected.bind(this, clientId))
+    ws.on('error', (error) => {
+      this.onError(error, clientId)
+    })
 
-      ws.on('message', async (data: WebSocket.Data, isBinary: boolean) => {
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string
-        const message = isBinary ? data : data.toString()
-        await this.onMessageReceived(message, clientId)
-      })
-      ws.on('close', () => {
-        this.onClientDisconnected(clientId)
-      })
-      ws.on('error', (error) => {
-        this.onError(error, clientId)
-      })
-
-      this.logger.debug(`client : ${clientId} Connection accepted.`)
-    } catch (error) {
-      this.logger.error(`Failed on client connection: ${JSON.stringify(error)}`)
-    }
+    this.logger.debug(`client : ${clientId} Connection accepted.`)
   }
 
   /**
    * @description Called on close event of WebSocket Server
-   * @param {Number} index Index of the connected client
+   * @param {string} clientId Index of the connected client
    */
   onClientDisconnected (clientId: string): void {
-    try {
-      this.clientManager.removeClient(clientId)
-      this.logger.debug(`Connection ended for client : ${clientId}`)
-    } catch (error) {
-      this.logger.error(`Failed to close connection : ${error}`)
-    }
+    delete devices[clientId]
+    this.logger.debug(`Connection ended for client : ${clientId}`)
   }
 
   /**
    * @description Called on error event of WebSocket Server
    * @param {Error} error Websocket error
+   * @param {string} clientId
    */
   onError (error: Error, clientId: string): void {
     this.logger.error(`${clientId} : ${error.message}`)
@@ -106,7 +87,7 @@ export class WebSocketListener implements IWebSocketListener {
   async onMessageReceived (message: WebSocket.Data, clientId: string): Promise<void> {
     try {
       // this.logger.debug(`Message from client ${clientId}: ${JSON.stringify(message, null, "\t")}`);
-      let responseMsg: any
+      let responseMsg: ClientMsg
       if (this.dataProcessor) {
         responseMsg = await this.dataProcessor.processData(message, clientId)
         if (responseMsg) {
@@ -121,15 +102,14 @@ export class WebSocketListener implements IWebSocketListener {
   /**
    * @external sendMessage
    * @description sends a message to the connected client
-   * @param {Number} index Index of the connected client
-   * @param {JSON} message Message in JSON format to be sent to client
+   * @param {string} clientId Index of the connected client
+   * @param {ClientMsg} message Message to be sent to client
    */
-  onSendMessage (message: string, clientId: string): void {
+  onSendMessage (message: ClientMsg, clientId: string): void {
     try {
-      const index = this.clientManager.getClientIndex(clientId)
       this.logger.debug(`${clientId} : response message sent to device: ${JSON.stringify(message, null, '\t')}`)
-      if (index > -1) {
-        this.clientManager.clients[index].ClientSocket.send(JSON.stringify(message))
+      if (devices[clientId] != null) {
+        devices[clientId].ClientSocket.send(JSON.stringify(message))
       }
     } catch (error) {
       this.logger.error(`Failed to send message to AMT: ${error}`)

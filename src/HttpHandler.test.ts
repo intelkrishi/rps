@@ -1,5 +1,4 @@
-import { CIM } from '@open-amt-cloud-toolkit/wsman-messages/index'
-import { DigestChallenge } from '@open-amt-cloud-toolkit/wsman-messages/models/common'
+import { CIM, Common } from '@open-amt-cloud-toolkit/wsman-messages'
 import { HttpHandler } from './HttpHandler'
 
 const httpHandler = new HttpHandler()
@@ -22,11 +21,11 @@ it('should parse authentication response header', async () => {
     qop: 'auth'
   }
   const value: string = 'Digest realm="Digest:56ABC7BE224EF620C69EB88F01071DC8", nonce="fVNueyEAAAAAAAAAcO8WqJ8s+WdyFUIY",stale="false",qop="auth"'
-  const result: DigestChallenge = httpHandler.parseAuthenticateResponseHeader(value)
+  const result: Common.Models.DigestChallenge = httpHandler.parseAuthenticateResponseHeader(value)
   expect(JSON.stringify(result)).toBe(JSON.stringify(digestChallenge))
 })
 it('should return a WSMan request', async () => {
-  const cim = new CIM.CIM()
+  const cim = new CIM.Messages()
   const xmlRequestBody = cim.ServiceAvailableToElement(CIM.Methods.ENUMERATE, '1')
   const digestChallenge = {
     realm: 'Digest:56ABC7BE224EF620C69EB88F01071DC8',
@@ -34,14 +33,14 @@ it('should return a WSMan request', async () => {
     stale: 'false',
     qop: 'auth'
   }
-  httpHandler.connectionParams = {
+  const connectionParams = {
     guid: '4c4c4544-004b-4210-8033-b6c04f504633',
     port: 16992,
     digestChallenge: digestChallenge,
     username: 'admin',
     password: 'P@ssw0rd'
   }
-  const result = httpHandler.wrapIt(xmlRequestBody)
+  const result = httpHandler.wrapIt(xmlRequestBody, connectionParams)
   expect(result).toContain('Authorization')
 })
 it('should return a null when no xml is passed to wrap a WSMan request', async () => {
@@ -51,13 +50,13 @@ it('should return a null when no xml is passed to wrap a WSMan request', async (
     stale: 'false',
     qop: 'auth'
   }
-  httpHandler.connectionParams = {
+  const connectionParams = {
     guid: '4c4c4544-004b-4210-8033-b6c04f504633',
     port: 16992,
     digestChallenge: digestChallenge,
     username: 'admin',
     password: 'P@ssw0rd'
   }
-  const result = httpHandler.wrapIt(null)
+  const result = httpHandler.wrapIt(null, connectionParams)
   expect(result).toBe(null)
 })

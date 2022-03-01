@@ -1,11 +1,11 @@
-import { RCSConfig } from '../../models/Rcs'
+import { RPSConfig } from '../../models'
 
-export const config: RCSConfig = {
+export const config: RPSConfig = {
   VaultConfig: {
     usevault: false,
-    SecretsPath: 'kv/data/rcs/',
+    SecretsPath: 'secret/data/',
     token: '',
-    address: ''
+    address: 'http://localhost:8200'
   },
   amtusername: 'admin',
   webport: 8081,

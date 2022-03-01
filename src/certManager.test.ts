@@ -5,7 +5,7 @@
 
 import { CertManager } from './CertManager'
 import { NodeForge } from './NodeForge'
-import { AMTKeyUsage, CertAttributes, CertificateObject } from './models/Rcs'
+import { AMTKeyUsage, CertAttributes, CertificateObject } from './models'
 import Logger from './Logger'
 import { TEST_PFXCERT, EXPECTED_CERT } from './test/helper/certs'
 
@@ -69,7 +69,6 @@ describe('certManager tests', () => {
       // convert the certificate pfx to an object
       const pfxobj = certManager.convertPfxToObject(pfxb64, 'Intel123!')
 
-      expect(pfxobj.errorText).toBeUndefined()
       expect(pfxobj.certs).toHaveLength(1)
       expect(pfxobj.keys).toHaveLength(1)
 

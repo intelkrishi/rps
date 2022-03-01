@@ -4,16 +4,11 @@
  * Author: Madhavi Losetty
  **********************************************************************/
 import { v4 as uuid } from 'uuid'
-
-import Logger from '../Logger'
-import { NodeForge } from '../NodeForge'
-import { ClientManager } from '../ClientManager'
+import { devices } from '../WebSocketListener'
 import { ClientMsgJsonParser } from './ClientMsgJsonParser'
 import { RPSError } from './RPSError'
 
-const nodeForge = new NodeForge()
-const clientManager = ClientManager.getInstance(new Logger('ClientManager'))
-const jsonParser = new ClientMsgJsonParser(nodeForge)
+const jsonParser = new ClientMsgJsonParser()
 
 describe('Parse the message received from client', () => {
   test('When method is activation, it should decode payload and return the message ', () => {
@@ -61,7 +56,7 @@ describe('Parse the message received from client', () => {
     }
 
     const clientId = uuid()
-    clientManager.addClient({ ClientId: clientId, ClientSocket: null })
+    devices[clientId] = { ClientId: clientId, ClientSocket: null }
     const clientMsg = jsonParser.parse(msg)
     expect(clientMsg).toEqual(activationmsg)
   })
@@ -79,7 +74,7 @@ describe('Parse the message received from client', () => {
     let rpsError
     try {
       const clientId = uuid()
-      clientManager.addClient({ ClientId: clientId, ClientSocket: null })
+      devices[clientId] = { ClientId: clientId, ClientSocket: null }
       jsonParser.convertClientMsg(msg)
     } catch (error) {
       rpsError = error
@@ -101,7 +96,7 @@ describe('Parse the message received from client', () => {
     }
 
     const clientId = uuid()
-    clientManager.addClient({ ClientId: clientId, ClientSocket: null })
+    devices[clientId] = { ClientId: clientId, ClientSocket: null }
     const clientMsg = jsonParser.parse(msg)
     expect(clientMsg).toEqual(activationmsg)
   })
@@ -119,11 +114,11 @@ describe('Parse the message received from client', () => {
     }
 
     const clientId = uuid()
-    clientManager.addClient({ ClientId: clientId, ClientSocket: null })
+    devices[clientId] = { ClientId: clientId, ClientSocket: null }
     const clientMsg = jsonParser.parse(msg)
     expect(clientMsg).toEqual(heartbeatResponse)
   })
-  afterEach(() => {
-    clientManager.clients = []
-  })
+  // afterEach(() => {
+  //   clientManager.clients = []
+  // })
 })

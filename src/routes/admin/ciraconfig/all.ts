@@ -6,7 +6,7 @@
 import Logger from '../../../Logger'
 import { API_RESPONSE, API_UNEXPECTED_EXCEPTION } from '../../../utils/constants'
 import { CIRAConfig } from '../../../models/RCS.Config'
-import { DataWithCount } from '../../../models/Rcs'
+import { DataWithCount } from '../../../models'
 import { MqttProvider } from '../../../utils/MqttProvider'
 import { Request, Response } from 'express'
 
@@ -16,7 +16,7 @@ export async function allCiraConfigs (req: Request, res: Response): Promise<void
   const skip = Number(req.query.$skip)
   const includeCount = req.query.$count
   try {
-    let ciraConfigs: CIRAConfig[] = await req.db.ciraConfigs.get(top, skip) || [] as CIRAConfig[]
+    let ciraConfigs: CIRAConfig[] = await req.db.ciraConfigs.get(top, skip)
     if (ciraConfigs.length >= 0) {
       ciraConfigs = ciraConfigs.map((result: CIRAConfig) => {
         delete result.password

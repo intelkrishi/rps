@@ -6,12 +6,11 @@
  **********************************************************************/
 
 import { ILogger } from '../../interfaces/ILogger'
-import { AMTDeviceDTO } from '.././dto/AmtDeviceDTO'
 import { IAMTDeviceRepository } from '../../interfaces/database/IAMTDeviceRepository'
 import { IConfigurator } from '../../interfaces/IConfigurator'
-import { EnvReader } from '../../utils/EnvReader'
 import { RPSError } from '../../utils/RPSError'
 import { AMTUserName } from '../../utils/constants'
+import { AMTDeviceDTO } from '../../models'
 
 export class AMTDeviceVaultRepository implements IAMTDeviceRepository {
   private readonly logger: ILogger
@@ -29,7 +28,7 @@ export class AMTDeviceVaultRepository implements IAMTDeviceRepository {
         data.data.AMT_PASSWORD = device.amtpass
         data.data.MEBX_PASSWORD = device.mebxpass
         data.data.MPS_PASSWORD = device.mpspass
-        await this.configurator.secretsManager.writeSecretWithObject(`${EnvReader.GlobalEnvConfig.VaultConfig.SecretsPath}devices/${device.guid}`, data)
+        await this.configurator.secretsManager.writeSecretWithObject(`devices/${device.guid}`, data)
         return true
       } else {
         throw new Error('secret manager missing')
@@ -40,16 +39,16 @@ export class AMTDeviceVaultRepository implements IAMTDeviceRepository {
     }
   }
 
-  public async delete (device: AMTDeviceDTO): Promise<boolean> {
+  public async delete (guid: string): Promise<boolean> {
     try {
       if (this.configurator?.secretsManager) {
-        await this.configurator.secretsManager.deleteSecretWithPath(`${EnvReader.GlobalEnvConfig.VaultConfig.SecretsPath}devices/${device.guid}`)
+        await this.configurator.secretsManager.deleteSecretWithPath(`devices/${guid}`)
         return true
       } else {
         throw new Error('secret manager missing')
       }
     } catch (error) {
-      this.logger.error(`failed to delete record guid: ${device.guid}, error: ${JSON.stringify(error)}`)
+      this.logger.error(`failed to delete record guid: ${guid}, error: ${JSON.stringify(error)}`)
       throw new RPSError('Exception deleting from vault')
     }
   }
@@ -57,16 +56,17 @@ export class AMTDeviceVaultRepository implements IAMTDeviceRepository {
   public async get (deviceId: string): Promise<AMTDeviceDTO> {
     try {
       if (this.configurator?.secretsManager) {
-        const devicePwds: any = await this.configurator.secretsManager.getSecretAtPath(`${EnvReader.GlobalEnvConfig.VaultConfig.SecretsPath}devices/${deviceId}`)
+        const devicePwds: any = await this.configurator.secretsManager.getSecretAtPath(`devices/${deviceId}`)
         if (devicePwds) {
-          const amtDevice: AMTDeviceDTO = new AMTDeviceDTO(
-            deviceId,
-            deviceId,
-            null,
-            devicePwds.data.MPS_PASSWORD,
-            AMTUserName,
-            devicePwds.data.AMT_PASSWORD,
-            devicePwds.data.MEBX_PASSWORD)
+          const amtDevice: AMTDeviceDTO = {
+            guid: deviceId,
+            name: deviceId,
+            mpsuser: null,
+            mpspass: devicePwds.data.MPS_PASSWORD,
+            amtuser: AMTUserName,
+            amtpass: devicePwds.data.AMT_PASSWORD,
+            mebxpass: devicePwds.data.MEBX_PASSWORD
+          }
           this.logger.debug(`found vault amt device: ${deviceId}`)
 
           return amtDevice

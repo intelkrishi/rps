@@ -2,11 +2,10 @@
  * Copyright (c) Intel Corporation 2021
  * SPDX-License-Identifier: Apache-2.0
  **********************************************************************/
-import { EnvReader } from '../../../utils/EnvReader'
 import Logger from '../../../Logger'
 import { API_RESPONSE, API_UNEXPECTED_EXCEPTION } from '../../../utils/constants'
 import { RPSError } from '../../../utils/RPSError'
-import { AMTConfiguration, AMTKeyUsage, CertAttributes, TLSCerts } from '../../../models/Rcs'
+import { AMTConfiguration, AMTKeyUsage, CertAttributes, TLSCerts } from '../../../models'
 import { MqttProvider } from '../../../utils/MqttProvider'
 import { Request, Response } from 'express'
 import { CertManager } from '../../../CertManager'
@@ -45,7 +44,7 @@ export async function createProfile (req: Request, res: Response): Promise<void>
           data.data.MEBX_PASSWORD = mebxPwdBefore
           log.debug('MEBX Password written to vault')
         }
-        await req.secretsManager.writeSecretWithObject(`${EnvReader.GlobalEnvConfig.VaultConfig.SecretsPath}profiles/${amtConfig.profileName}`, data)
+        await req.secretsManager.writeSecretWithObject(`profiles/${amtConfig.profileName}`, data)
       }
       // generate self signed certificates for use with TLS config if applicable
       if (amtConfig.tlsMode != null) {
@@ -106,5 +105,5 @@ async function generateSelfSignedCertificate (req: Request, profileName: string)
     }
   }
 
-  await req.secretsManager.writeSecretWithObject(`${EnvReader.GlobalEnvConfig.VaultConfig.SecretsPath}TLS/${profileName}`, certs)
+  await req.secretsManager.writeSecretWithObject(`TLS/${profileName}`, certs)
 }
